@@ -133,7 +133,6 @@ function App() {
     'X': 'Player1',
     'O': 'Player2'
   });
-
   const [gameTurns, setGameTurns] = useState([]);
   const [mode, setMode] = useState(null);
   const [difficulty, setDifficulty] = useState(null);
@@ -141,6 +140,10 @@ function App() {
   const [waitingForOpponent, setWaitingForOpponent] = useState(true);
   const [connectedPlayers, setConnectedPlayers] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
+  const [playerSymbols, setPlayerSymbols] = useState('X');
+  const [rematchRequested, setRematchRequested] = useState(false);
+  const [waitingForRematch, setWaitingForRematch] = useState(false);
+
 
   const activePlayer = deriveActivePlayer(gameTurns);
   const gameBoard = deriveGameBoard(gameTurns);
@@ -192,8 +195,18 @@ function App() {
       
       socket.on('gameMove', (move) => {
         console.log('Move received:', move);
-        setGameTurns(prevTurns => [move, ...prevTurns]);
+        setGameTurns(prevTurns => {
+          const updatedTurns = [move, ...prevTurns];
+      
+          // Determine if this is the first move and set player symbols
+          if (updatedTurns.length === 1) {
+            setPlayerSymbols('O');
+          }
+          
+          return updatedTurns;
+        });
       });
+
     
       socket.on('gameUpdate', (gameTurns) => {
         setGameTurns(gameTurns);
@@ -202,13 +215,21 @@ function App() {
       socket.on('gameRestarted', () => {
         setGameTurns([]);
       });
-    
+
+      socket.on('playerNameUpdated', ({ symbol, newName }) => {
+        setPlayers(prevPlayers => ({
+          ...prevPlayers,
+          [symbol]: newName
+        }));
+      });
+
       // Clean up event listeners on component unmount
       return () => {
         socket.off('updatePlayerList');
         socket.off('gameMove');
         socket.off('gameUpdate');
         socket.off('gameRestarted');
+        socket.off('playerNameUpdated');
       };
     }
   }, [roomId]);
@@ -225,8 +246,13 @@ function App() {
     if (winner || hasDraw || gameBoard[rowIndex][colIndex]) {
       return;
     }
-
+    if (mode === 'computer' && activePlayer !== 'X') {
+      return;
+    }
     const currentPlayer = deriveActivePlayer(gameTurns);
+    if (mode === 'human' && playerSymbols !== currentPlayer) {
+      return; // Invalid move attempt; return early
+    }
     const newMove = { square: { row: rowIndex, col: colIndex }, player: currentPlayer };
     console.log('Move made:', newMove);
     setGameTurns(prevTurns => [newMove, ...prevTurns]);
@@ -234,6 +260,56 @@ function App() {
     // Emit the move to the server, including the room ID
     socket.emit('gameMove', { move: newMove, roomId });
   }
+  useEffect(() => {
+    socket.on('rematchAccepted', () => {
+      setGameTurns([]);
+      setPlayerSymbols('X')
+      setRematchRequested(false);
+      setWaitingForRematch(false);
+    });
+  
+    socket.on('rematchRequested', () => {
+      if (!rematchRequested) {
+        setRematchRequested(false);
+        setWaitingForRematch(true);
+      } else {
+        socket.emit('acceptRematch', { roomId });
+        setGameTurns([]);
+        setRematchRequested(true);
+        setWaitingForRematch(false);
+      }
+    });
+  
+    // Cleanup socket listeners on unmount
+    return () => {
+      socket.off('rematchAccepted');
+      socket.off('rematchRequested');
+    };
+  }, [rematchRequested, roomId]);
+
+  useEffect(() => {
+    socket.on('playerDisconnected', () => {
+      // Reset the game state
+      handleRestart();
+    });
+  
+    socket.on('resetGameBoard', () => {
+      // Reset the game state and show a waiting message
+      handleChangeRoomID(); // Implement this function to reset the game state
+    });
+
+    return () => {
+      socket.off('playerDisconnected');
+      socket.off('resetGameBoard');
+    };
+  }, [socket]);
+
+  useEffect(() => {
+    if (roomId && connectedPlayers.length <= 2) {
+      setGameTurns([]); // Reset game turns if condition is met
+      setPlayerSymbols('X');
+    }
+  }, [roomId, connectedPlayers.length]);
 
   function handleRestart() {
     setGameTurns([]);
@@ -245,7 +321,17 @@ function App() {
       ...prevPlayers,
       [symbol]: newName
     }));
+    
+    // Emit the name change to the server
+    if (roomId) {
+      socket.emit('updatePlayerName', { roomId, symbol, newName });
+    }
+  
+    if (roomId) {
+      socket.emit('changePlayerName', { symbol, newName, roomId });
+    }
   }
+  
 
   const handleModeSelection = (selectedMode) => {
     setMode(selectedMode);
@@ -261,8 +347,20 @@ function App() {
     setRoomId(newRoomId);
     socket.emit('joinRoom', newRoomId);
   };
-
+  function handleRematch() {
+    if (mode === 'human') {
+      setRematchRequested(true);
+      socket.emit('requestRematch', { roomId });
+      setWaitingForRematch(true);
+    } else {
+      handleRestart();
+    }
+  }
+  
   const handleChangeMode = () => {
+    if (roomId) {
+      socket.emit('leaveRoom', { roomId });
+    }
     setMode(null);
     setDifficulty(null);
     setGameTurns([]);
@@ -271,6 +369,8 @@ function App() {
     setConnectedPlayers([]);
     setErrorMessage('');
     setRoomId('');
+    setRematchRequested(false);
+    setWaitingForRematch(false);
   };
 
   const handleChangeRoomID = () => {
@@ -281,6 +381,8 @@ function App() {
     setConnectedPlayers([]);
     setErrorMessage('');
     setRoomId('');
+    setRematchRequested(false);
+    setWaitingForRematch(false);
   };
   return (
     <div>
@@ -303,11 +405,7 @@ function App() {
       ) : (
         <main>
           <div id="game-container">
-            <ol id="players" className="highlight-player">
-              <Player initialName="Player 1" symbol="X" isActive={activePlayer === 'X'} onChangeName={handlePlayerNameChange} />
-              <Player initialName="Player 2" symbol="O" isActive={activePlayer === 'O'} onChangeName={handlePlayerNameChange} />
-            </ol>
-            {(winner || hasDraw) && <GameOver winner={winner} onRestart={handleRestart} onChangeMode={handleChangeMode} />}
+            {(winner || hasDraw) && <GameOver winner={winner} players={players} playerSymbols={playerSymbols} onRestart={handleRematch} onChangeMode={handleChangeMode} isWaitingForRematch={waitingForRematch} rematchRequested={rematchRequested} />}
             <GameBoard 
               onSelectSquare={handleSelectSquare}  
               board={gameBoard}

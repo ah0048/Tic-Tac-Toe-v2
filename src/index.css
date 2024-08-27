@@ -507,3 +507,19 @@ ol {
 .error-message button:focus {
   outline: none;
 }
+
+.waiting-rematch {
+  font-size: 1.1rem;
+  color: #ffea5c;
+  margin-top: 1rem;
+  text-align: center;
+  animation: pulse-text 1.5s infinite;
+}
+
+.rematch-request {
+  font-size: 1.5rem;
+  color: #ffea5c;
+  margin-top: 1rem;
+  text-align: center;
+  animation: pulse-text 1.5s infinite;
+}

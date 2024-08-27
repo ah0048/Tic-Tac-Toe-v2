@@ -40,8 +40,22 @@ io.on('connection', (socket) => {
     io.to(roomId).emit('roomJoined', rooms[roomId].map(id => io.sockets.sockets.get(id).handshake.query.username || id));
   });
 
+  socket.on('leaveRoom', ({ roomId }) => {
+    if (rooms[roomId]) {
+      rooms[roomId] = rooms[roomId].filter((id) => id !== socket.id);
+      console.log(`User ${socket.id} left room ${roomId}`);
+      if (rooms[roomId].length === 0) {
+        delete rooms[roomId];
+      } else {
+        io.to(roomId).emit('updatePlayerList', rooms[roomId]);
+      }
+
+      socket.leave(roomId);
+    }
+  });
+
   socket.on('gameMove', ({ move, roomId }) => {
-    console.log(`Move received from ${socket.id} in room ${roomId}:`, move);
+    console.log(`Move received from ${socket.id} in room ${roomId}: ${move}`);
 
     // Emit the move to the other players in the same room
     socket.to(roomId).emit('gameMove', move);
@@ -61,6 +75,32 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('requestRematch', ({ roomId }) => {
+    console.log(`Player ${socket.id} requested a rematch in room ${roomId}`);
+    socket.to(roomId).emit('rematchRequested');
+  });
+
+  socket.on('acceptRematch', ({ roomId }) => {
+    console.log(`Player ${socket.id} accepted the rematch in room ${roomId}`);
+    io.to(roomId).emit('rematchAccepted');
+  });
+
+  socket.on('updatePlayerName', ({ roomId, symbol, newName }) => {
+    // Find the index of the player in the room
+    const playerIndex = rooms[roomId].findIndex(id => io.sockets.sockets.get(id).handshake.query.username === symbol);
+  
+    if (playerIndex !== -1) {
+      // Update the player name for the room
+      io.to(roomId).emit('playerNameUpdated', { symbol, newName });
+    }
+  });
+
+  // Handle player name changes
+  socket.on('changePlayerName', ({ symbol, newName, roomId }) => {
+    console.log(`Player ${socket.id} changed their name to ${newName} in room ${roomId}`);
+    io.to(roomId).emit('playerNameUpdated', { symbol, newName });
+  });
+
   socket.on('disconnect', () => {
     console.log('A user disconnected');
     Object.keys(rooms).forEach(roomId => {
@@ -69,6 +109,7 @@ io.on('connection', (socket) => {
         delete rooms[roomId];
       } else {
         // Emit an event with updated player list when a player disconnects
+        io.to(roomId).emit('resetGameBoard');
         io.to(roomId).emit('updatePlayerList', rooms[roomId].map(id => io.sockets.sockets.get(id).handshake.query.username || id));
       }
     });
@@ -77,4 +118,4 @@ io.on('connection', (socket) => {
 
 server.listen(3000, () => {
   console.log('Server is listening on port 3000');
-});
+}); 
