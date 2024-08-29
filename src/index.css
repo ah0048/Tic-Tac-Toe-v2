@@ -523,3 +523,45 @@ ol {
   text-align: center;
   animation: pulse-text 1.5s infinite;
 }
+
+/* JoinMethodSelection Component Styles */
+.join-method-selection {
+  text-align: center;
+  margin: 3rem auto;
+  padding: 2rem;
+  background: #383624;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  max-width: 25rem;
+}
+
+.join-method-selection h2 {
+  font-family: 'Caprasimo', cursive;
+  font-size: 2rem;
+  color: #fcd256;
+  margin-bottom: 2rem;
+}
+
+.join-method-selection button {
+  display: block;
+  width: 80%;
+  margin: 1rem auto;
+  padding: 1rem;
+  font-family: 'Caprasimo', cursive;
+  font-size: 1.5rem;
+  color: #3f3b00;
+  background: #f8c031;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+}
+
+.join-method-selection button:hover {
+  background: #f6e35a;
+  transform: scale(1.05);
+}
+
+.join-method-selection button:focus {
+  outline: none;
+}

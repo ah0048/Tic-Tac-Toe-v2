@@ -54,6 +54,31 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('joinRandomRoom', () => {
+    let roomId = null;
+    for (const [id, players] of Object.entries(rooms)) {
+      if (players.length <= 2) {
+        roomId = id;
+        break;
+      }
+    }
+
+    if (!roomId) {
+      roomId = Math.random().toString(36).substring(2, 9);
+    }
+
+    socket.emit('assignRoomId', roomId);
+    socket.join(roomId);
+    rooms[roomId] = rooms[roomId] || [];
+    rooms[roomId].push(socket.id);
+
+    io.to(roomId).emit('updatePlayerList', rooms[roomId]);
+
+    if (rooms[roomId].length > 2) {
+      io.to(roomId).emit('startGame');
+    }
+  });
+
   socket.on('gameMove', ({ move, roomId }) => {
     console.log(`Move received from ${socket.id} in room ${roomId}: ${move}`);
 

@@ -8,6 +8,7 @@ import GameOver from "./component/GameOver.jsx";
 import ModeSelection from './component/ModeSelection';
 import DifficultySelection from './component/DifficultySelection';
 import RoomIdForm from './component/RoomIDForm';
+import JoinMethodSelection from './component/JoinMethodSelection';
 
 const initialGameBoard = [
   [null, null, null],
@@ -143,6 +144,7 @@ function App() {
   const [playerSymbols, setPlayerSymbols] = useState('X');
   const [rematchRequested, setRematchRequested] = useState(false);
   const [waitingForRematch, setWaitingForRematch] = useState(false);
+  const [joinMethod, setJoinMethod] = useState(null);
 
 
   const activePlayer = deriveActivePlayer(gameTurns);
@@ -192,7 +194,10 @@ function App() {
         setErrorMessage('The room is already full. Please enter a different room ID ');
       });
       
-      
+      socket.on('startGame', () => {
+        setWaitingForOpponent(false);
+      });
+    
       socket.on('gameMove', (move) => {
         console.log('Move received:', move);
         setGameTurns(prevTurns => {
@@ -230,6 +235,7 @@ function App() {
         socket.off('gameUpdate');
         socket.off('gameRestarted');
         socket.off('playerNameUpdated');
+        socket.off('startGame');
       };
     }
   }, [roomId]);
@@ -316,6 +322,14 @@ function App() {
     socket.emit('restartGame');
   }
 
+  function handleJoinRandomRoom() {
+    socket.emit('joinRandomRoom');
+    
+    socket.on('assignRoomId', (assignedRoomId) => {
+      setRoomId(assignedRoomId);
+    });
+  }
+
   function handlePlayerNameChange(symbol, newName) {
     setPlayers(prevPlayers => ({
       ...prevPlayers,
@@ -339,6 +353,10 @@ function App() {
     setGameTurns([]); // Reset game turns when changing mode
   };
 
+  const handleSelectJoinMethod = (method) => {
+    setJoinMethod(method);
+  };
+  
   const handleDifficultySelection = (selectedDifficulty) => {
     setDifficulty(selectedDifficulty);
   };
@@ -371,6 +389,7 @@ function App() {
     setRoomId('');
     setRematchRequested(false);
     setWaitingForRematch(false);
+    setJoinMethod(false)
   };
 
   const handleChangeRoomID = () => {
@@ -389,14 +408,18 @@ function App() {
       {!mode ? (
         <ModeSelection onSelectMode={handleModeSelection} />
       ) : mode === 'human' && !roomId ? (
-        <RoomIdForm 
+        !joinMethod ? (
+          <JoinMethodSelection onSelectJoinMethod={handleSelectJoinMethod} onJoinRandomRoom={handleJoinRandomRoom} />
+        ) : joinMethod === 'roomId' ? (
+          <RoomIdForm 
           onJoinRoom={handleJoinRoom}
           connectedPlayers={connectedPlayers}
-        />
+          />
+        ) : null
       ) : errorMessage ? (
         <div className="error-message">
           {errorMessage}
-          <button onClick={() => handleChangeRoomID()}>OK</button>
+          <button onClick={handleChangeRoomID}>OK</button>
         </div>
       ) : roomId && connectedPlayers.length <= 2 ? (
         <div className="waiting-message">Waiting for another player to join...</div>
@@ -405,7 +428,17 @@ function App() {
       ) : (
         <main>
           <div id="game-container">
-            {(winner || hasDraw) && <GameOver winner={winner} players={players} playerSymbols={playerSymbols} onRestart={handleRematch} onChangeMode={handleChangeMode} isWaitingForRematch={waitingForRematch} rematchRequested={rematchRequested} />}
+            {(winner || hasDraw) && (
+              <GameOver
+                winner={winner}
+                players={players}
+                playerSymbols={playerSymbols}
+                onRestart={handleRematch}
+                onChangeMode={handleChangeMode}
+                isWaitingForRematch={waitingForRematch}
+                rematchRequested={rematchRequested}
+              />
+            )}
             <GameBoard 
               onSelectSquare={handleSelectSquare}  
               board={gameBoard}
@@ -416,7 +449,9 @@ function App() {
         </main>
       )}
     </div>
-  );  
+  );
+  
+  
 }
 
 export default App;
