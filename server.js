@@ -15,15 +15,21 @@ const io = new SocketIOServer(server, {
 app.use(cors());
 
 let rooms = {};
+let randomRooms = {};
 
 io.on('connection', (socket) => {
   console.log('A user connected');
 
-  socket.on('joinRoom', (roomId) => {
+  socket.on('joinRoom', (roomId, isRandom = false) => {
     socket.join(roomId);
 
     if (!rooms[roomId]) {
       rooms[roomId] = [];
+    }
+
+    // Mark room as random if it was randomly generated
+    if (isRandom) {
+      randomRooms[roomId] = true;
     }
 
     if (rooms[roomId].length > 3) {
@@ -38,7 +44,8 @@ io.on('connection', (socket) => {
     console.log(`User ${socket.id} joined room ${roomId}`);
     io.to(roomId).emit('updatePlayerList', rooms[roomId].map(id => io.sockets.sockets.get(id).handshake.query.username || id));
     io.to(roomId).emit('roomJoined', rooms[roomId].map(id => io.sockets.sockets.get(id).handshake.query.username || id));
-  });
+});
+
 
   socket.on('leaveRoom', ({ roomId }) => {
     if (rooms[roomId]) {
@@ -57,14 +64,15 @@ io.on('connection', (socket) => {
   socket.on('joinRandomRoom', () => {
     let roomId = null;
     for (const [id, players] of Object.entries(rooms)) {
-      if (players.length <= 2) {
-        roomId = id;
-        break;
-      }
+        if (players.length <= 2 && randomRooms[id]) { // Check if the room is random
+            roomId = id;
+            break;
+        }
     }
 
     if (!roomId) {
-      roomId = Math.random().toString(36).substring(2, 9);
+        roomId = Math.random().toString(36).substring(2, 9);
+        randomRooms[roomId] = true; // Mark this new room as random
     }
 
     socket.emit('assignRoomId', roomId);
@@ -75,9 +83,10 @@ io.on('connection', (socket) => {
     io.to(roomId).emit('updatePlayerList', rooms[roomId]);
 
     if (rooms[roomId].length > 2) {
-      io.to(roomId).emit('startGame');
+        io.to(roomId).emit('startGame');
     }
-  });
+});
+
 
   socket.on('gameMove', ({ move, roomId }) => {
     console.log(`Move received from ${socket.id} in room ${roomId}: ${move}`);
@@ -129,16 +138,18 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('A user disconnected');
     Object.keys(rooms).forEach(roomId => {
-      rooms[roomId] = rooms[roomId].filter(id => id !== socket.id);
-      if (rooms[roomId].length === 0) {
-        delete rooms[roomId];
-      } else {
-        // Emit an event with updated player list when a player disconnects
-        io.to(roomId).emit('resetGameBoard');
-        io.to(roomId).emit('updatePlayerList', rooms[roomId].map(id => io.sockets.sockets.get(id).handshake.query.username || id));
-      }
-    });
+        rooms[roomId] = rooms[roomId].filter(id => id !== socket.id);
+        if (rooms[roomId].length === 0) {
+            delete rooms[roomId];
+            delete randomRooms[roomId]; // Clean up the randomRooms object
+        } else {
+            // Emit an event with updated player list when a player disconnects
+            io.to(roomId).emit('resetGameBoard');
+            io.to(roomId).emit('updatePlayerList', rooms[roomId].map(id => io.sockets.sockets.get(id).handshake.query.username || id));
+          }
+      });
   });
+
 });
 
 server.listen(3000, () => {
