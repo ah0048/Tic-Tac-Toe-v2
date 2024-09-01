@@ -145,6 +145,7 @@ function App() {
   const [rematchRequested, setRematchRequested] = useState(false);
   const [waitingForRematch, setWaitingForRematch] = useState(false);
   const [joinMethod, setJoinMethod] = useState(null);
+  const [onlinePlayers, setOnlinePlayers] = useState(0);
 
 
   const activePlayer = deriveActivePlayer(gameTurns);
@@ -247,6 +248,15 @@ function App() {
       });
     }
   }, [roomId, waitingForOpponent]);
+
+  useEffect(() => {
+    socket.on('updateOnlinePlayers', (count) => {
+      setOnlinePlayers(count); // Update the number of online players
+    });
+    return () => {
+      socket.off('updateOnlinePlayers');
+    };
+  }, []);
 
   function handleSelectSquare(rowIndex, colIndex) {
     if (winner || hasDraw || gameBoard[rowIndex][colIndex]) {
@@ -406,7 +416,7 @@ function App() {
   return (
     <div>
       {!mode ? (
-        <ModeSelection onSelectMode={handleModeSelection} />
+        <ModeSelection onSelectMode={handleModeSelection} onlinePlayers={onlinePlayers} />
       ) : mode === 'human' && !roomId ? (
         !joinMethod ? (
           <JoinMethodSelection onSelectJoinMethod={handleSelectJoinMethod} onJoinRandomRoom={handleJoinRandomRoom} />

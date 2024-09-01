@@ -19,6 +19,7 @@ let randomRooms = {};
 
 io.on('connection', (socket) => {
   console.log('A user connected');
+  io.emit('updateOnlinePlayers', io.engine.clientsCount);
 
   socket.on('joinRoom', (roomId, isRandom = false) => {
     socket.join(roomId);
@@ -137,6 +138,7 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('A user disconnected');
+    io.emit('updateOnlinePlayers', io.engine.clientsCount);
     Object.keys(rooms).forEach(roomId => {
         rooms[roomId] = rooms[roomId].filter(id => id !== socket.id);
         if (rooms[roomId].length === 0) {

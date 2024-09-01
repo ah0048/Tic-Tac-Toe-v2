@@ -565,3 +565,10 @@ ol {
 .join-method-selection button:focus {
   outline: none;
 }
+
+.online-players-message {
+  font-family: 'Caprasimo', cursive;
+  font-size: 1.75rem;
+  color: #3f3b00;
+  margin-bottom: 2rem;
+}
