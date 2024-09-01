@@ -16,7 +16,7 @@ const initialGameBoard = [
   [null, null, null]
 ];
 
-const socket = io('https://tic-tac-toe-sand-two-19.vercel.app'); // Connect to the server
+const socket = io('https://tic-tac-toe-eight-phi-17.vercel.app/'); // Connect to the server
 
 // Determine the active player
 function deriveActivePlayer(gameTurns) {
