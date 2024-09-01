@@ -1,11 +1,9 @@
 import express from 'express';
-import http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
 
 const app = express();
-const server = http.createServer(app);
-const io = new SocketIOServer(server, {
+const io = new SocketIOServer(app, {
   cors: {
     origin: '*',
     methods: ['GET', 'POST']
@@ -154,6 +152,6 @@ io.on('connection', (socket) => {
 
 });
 
-server.listen(3000, () => {
-  console.log('Server is listening on port 3000');
-});
+export default (req, res) => {
+  res.status(200).send('Serverless function running');
+};
