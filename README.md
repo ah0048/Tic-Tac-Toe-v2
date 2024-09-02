@@ -1,6 +1,6 @@
 # Tic-Tac-Toe-web-game
 
-This is a Tic-Tac-Toe game with two modes: Computer Mode and Multiplayer Mode. In Computer Mode, you can choose between two difficulty levels. In Multiplayer Mode, you can play with friends or against random players.
+This is a Tic-Tac-Toe game with two modes: Computer Mode and Multiplayer Mode. In Computer Mode, you can choose between two difficulty levels. In Multiplayer Mode, you can play with friends or against random players. you can either install the game and run it locally or you can visit the game site here https://tic-tac-toe-game.myschoolproject.tech
 
 ## Features
 
