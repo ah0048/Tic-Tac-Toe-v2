@@ -27,7 +27,7 @@ This is a Tic-Tac-Toe game with two modes: Computer Mode and Multiplayer Mode. I
     ```
 
    The `run.sh` script performs the following tasks:
-   - Kills any processes running on ports 3000 and 5173.
+   - Kills any processes running on ports 4000 and 5173.
    - Installs `tmux` if not already installed.
    - Installs required npm dependencies.
    - Starts the Node.js server in a new `tmux` session.
