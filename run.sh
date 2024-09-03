@@ -1,11 +1,11 @@
-PID=$(sudo lsof -t -i :3000)
+PID=$(sudo lsof -t -i :4000)
 
-# Check if a PID was found on port 3000
+# Check if a PID was found on port 4000
 if [ -n "$PID" ]; then
-  echo "Killing process with PID $PID on port 3000"
+  echo "Killing process with PID $PID on port 4000"
   sudo kill -9 $PID
 else
-  echo "No process is using port 3000"
+  echo "No process is using port 4000"
 fi
 
 PID=$(sudo lsof -t -i :5173)

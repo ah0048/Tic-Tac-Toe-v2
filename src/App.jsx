@@ -16,7 +16,7 @@ const initialGameBoard = [
   [null, null, null]
 ];
 
-const socket = io('http://localhost:3000'); // Connect to the server
+const socket = io('http://localhost:4000'); // Connect to the server
 
 // Determine the active player
 function deriveActivePlayer(gameTurns) {
